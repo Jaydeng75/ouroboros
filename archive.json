@@ -1,0 +1,23 @@
+{
+  "format_version": 1,
+  "cells": {
+    "is_palindrome:tighten_spec": {
+      "task_id": "is_palindrome__tighten_spec",
+      "success_rate": 0.25,
+      "novelty": 0.552,
+      "failure_signature": "AssertionError"
+    },
+    "is_palindrome:compose": {
+      "task_id": "is_palindrome__compose__word_count",
+      "success_rate": 0.5,
+      "novelty": 0.375,
+      "failure_signature": "AssertionError"
+    },
+    "top_k_frequent:compose": {
+      "task_id": "top_k_frequent__compose__all_subsets",
+      "success_rate": 0.75,
+      "novelty": 0.366,
+      "failure_signature": "AssertionError"
+    }
+  }
+}

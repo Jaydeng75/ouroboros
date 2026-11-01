@@ -1,0 +1,97 @@
+{
+  "format_version": 1,
+  "base_model": "Qwen2.5-Coder-7B",
+  "tasks_file": "tasks/seed_tasks.jsonl",
+  "shards": [
+    {
+      "id": "algorithms",
+      "task_ids": [
+        "all_subsets",
+        "binary_search",
+        "climb_stairs",
+        "factorial_of",
+        "is_happy_number",
+        "longest_common_prefix",
+        "max_profit",
+        "missing_number",
+        "string_permutations",
+        "two_sum"
+      ],
+      "status": "open",
+      "claimed_by": null,
+      "trace_file": "traces/shard-algorithms.jsonl"
+    },
+    {
+      "id": "collections",
+      "task_ids": [
+        "all_unique",
+        "char_frequency",
+        "count_pairs_sum",
+        "flatten_dict_values",
+        "group_by_length",
+        "invert_dict",
+        "merge_dicts_sum",
+        "sorted_intersection",
+        "top_k_frequent",
+        "zip_dict"
+      ],
+      "status": "open",
+      "claimed_by": null,
+      "trace_file": "traces/shard-collections.jsonl"
+    },
+    {
+      "id": "numbers",
+      "task_ids": [
+        "collatz_steps",
+        "count_set_bits",
+        "gcd_two",
+        "is_power_of_two",
+        "is_prime",
+        "lcm_two",
+        "median_of",
+        "power_mod",
+        "prime_factors",
+        "sum_digits"
+      ],
+      "status": "open",
+      "claimed_by": null,
+      "trace_file": "traces/shard-numbers.jsonl"
+    },
+    {
+      "id": "sequences",
+      "task_ids": [
+        "chunk_list",
+        "cumulative_sum",
+        "dedupe_preserve_order",
+        "flatten",
+        "interleave",
+        "max_subarray_sum",
+        "merge_sorted",
+        "reverse_list",
+        "rotate_list",
+        "second_largest"
+      ],
+      "status": "open",
+      "claimed_by": null,
+      "trace_file": "traces/shard-sequences.jsonl"
+    },
+    {
+      "id": "strings",
+      "task_ids": [
+        "caesar_shift",
+        "compress_string",
+        "count_vowels",
+        "first_unique_char",
+        "is_anagram",
+        "is_palindrome",
+        "longest_word",
+        "reverse_string",
+        "title_case",
+        "word_count"
+      ],
+      "status": "open",
+      "claimed_by": null,
+      "trace_file": "traces/shard-strings.jsonl"
+    }
+  ]
+}

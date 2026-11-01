@@ -1,0 +1,50 @@
+{"id": "all_subsets", "code": "def all_subsets(nums):\n    out = [[]]\n    for x in nums:\n        out += [s + [x] for s in out]\n    return out\n"}
+{"id": "all_unique", "code": "def all_unique(items):\n    return len(items) == len(set(items))\n"}
+{"id": "binary_search", "code": "def binary_search(values, target):\n    lo, hi = 0, len(values) - 1\n    while lo <= hi:\n        mid = (lo + hi) // 2\n        if values[mid] == target:\n            return mid\n        if values[mid] < target:\n            lo = mid + 1\n        else:\n            hi = mid - 1\n    return -1\n"}
+{"id": "caesar_shift", "code": "def caesar_shift(s, n):\n    out = []\n    for ch in s:\n        if 'a' <= ch <= 'z':\n            out.append(chr((ord(ch) - 97 + n) % 26 + 97))\n        elif 'A' <= ch <= 'Z':\n            out.append(chr((ord(ch) - 65 + n) % 26 + 65))\n        else:\n            out.append(ch)\n    return ''.join(out)\n"}
+{"id": "char_frequency", "code": "def char_frequency(s):\n    counts = {}\n    for ch in s:\n        counts[ch] = counts.get(ch, 0) + 1\n    return counts\n"}
+{"id": "chunk_list", "code": "def chunk_list(nums, n):\n    return [nums[i:i + n] for i in range(0, len(nums), n)]\n"}
+{"id": "climb_stairs", "code": "def climb_stairs(n):\n    a, b = 1, 1\n    for _ in range(n - 1):\n        a, b = b, a + b\n    return b\n"}
+{"id": "collatz_steps", "code": "def collatz_steps(n):\n    steps = 0\n    while n != 1:\n        n = n // 2 if n % 2 == 0 else 3 * n + 1\n        steps += 1\n    return steps\n"}
+{"id": "compress_string", "code": "def compress_string(s):\n    out = []\n    i = 0\n    while i < len(s):\n        j = i\n        while j < len(s) and s[j] == s[i]:\n            j += 1\n        out.append(s[i] + str(j - i))\n        i = j\n    return ''.join(out)\n"}
+{"id": "count_pairs_sum", "code": "def count_pairs_sum(nums, target):\n    count = 0\n    seen = {}\n    for x in nums:\n        count += seen.get(target - x, 0)\n        seen[x] = seen.get(x, 0) + 1\n    return count\n"}
+{"id": "count_set_bits", "code": "def count_set_bits(n):\n    count = 0\n    while n:\n        count += n & 1\n        n >>= 1\n    return count\n"}
+{"id": "count_vowels", "code": "def count_vowels(s):\n    return sum(1 for ch in s.lower() if ch in 'aeiou')\n"}
+{"id": "cumulative_sum", "code": "def cumulative_sum(nums):\n    out = []\n    total = 0\n    for x in nums:\n        total += x\n        out.append(total)\n    return out\n"}
+{"id": "dedupe_preserve_order", "code": "def dedupe_preserve_order(nums):\n    seen = set()\n    out = []\n    for x in nums:\n        if x not in seen:\n            seen.add(x)\n            out.append(x)\n    return out\n"}
+{"id": "factorial_of", "code": "def factorial_of(n):\n    result = 1\n    for i in range(2, n + 1):\n        result *= i\n    return result\n"}
+{"id": "first_unique_char", "code": "def first_unique_char(s):\n    counts = {}\n    for ch in s:\n        counts[ch] = counts.get(ch, 0) + 1\n    for ch in s:\n        if counts[ch] == 1:\n            return ch\n    return None\n"}
+{"id": "flatten", "code": "def flatten(nested):\n    out = []\n    for item in nested:\n        if isinstance(item, list):\n            out.extend(flatten(item))\n        else:\n            out.append(item)\n    return out\n"}
+{"id": "flatten_dict_values", "code": "def flatten_dict_values(d):\n    out = []\n    for k in sorted(d):\n        out.extend(d[k])\n    return out\n"}
+{"id": "gcd_two", "code": "def gcd_two(a, b):\n    while b:\n        a, b = b, a % b\n    return a\n"}
+{"id": "group_by_length", "code": "def group_by_length(words):\n    out = {}\n    for w in words:\n        out.setdefault(len(w), []).append(w)\n    return {k: sorted(v) for k, v in out.items()}\n"}
+{"id": "interleave", "code": "def interleave(a, b):\n    out = []\n    for i in range(max(len(a), len(b))):\n        if i < len(a):\n            out.append(a[i])\n        if i < len(b):\n            out.append(b[i])\n    return out\n"}
+{"id": "invert_dict", "code": "def invert_dict(d):\n    return {v: k for k, v in d.items()}\n"}
+{"id": "is_anagram", "code": "def is_anagram(a, b):\n    norm = lambda t: sorted(t.lower().replace(' ', ''))\n    return norm(a) == norm(b)\n"}
+{"id": "is_happy_number", "code": "def is_happy_number(n):\n    seen = set()\n    while n != 1 and n not in seen:\n        seen.add(n)\n        n = sum(int(d) ** 2 for d in str(n))\n    return n == 1\n"}
+{"id": "is_palindrome", "code": "def is_palindrome(s):\n    chars = [c.lower() for c in s if c.isalnum()]\n    return chars == chars[::-1]\n"}
+{"id": "is_power_of_two", "code": "def is_power_of_two(n):\n    return n > 0 and (n & (n - 1)) == 0\n"}
+{"id": "is_prime", "code": "def is_prime(n):\n    if n < 2:\n        return False\n    i = 2\n    while i * i <= n:\n        if n % i == 0:\n            return False\n        i += 1\n    return True\n"}
+{"id": "lcm_two", "code": "def lcm_two(a, b):\n    import math\n    return a * b // math.gcd(a, b)\n"}
+{"id": "longest_common_prefix", "code": "def longest_common_prefix(strs):\n    if not strs:\n        return ''\n    prefix = strs[0]\n    for s in strs[1:]:\n        while not s.startswith(prefix):\n            prefix = prefix[:-1]\n            if not prefix:\n                return ''\n    return prefix\n"}
+{"id": "longest_word", "code": "def longest_word(sentence):\n    words = sentence.split()\n    return max(words, key=len) if words else ''\n"}
+{"id": "max_profit", "code": "def max_profit(prices):\n    best = 0\n    low = None\n    for p in prices:\n        low = p if low is None else min(low, p)\n        best = max(best, p - low)\n    return best\n"}
+{"id": "max_subarray_sum", "code": "def max_subarray_sum(nums):\n    best = cur = nums[0]\n    for x in nums[1:]:\n        cur = max(x, cur + x)\n        best = max(best, cur)\n    return best\n"}
+{"id": "median_of", "code": "def median_of(nums):\n    s = sorted(nums)\n    mid = len(s) // 2\n    if len(s) % 2:\n        return float(s[mid])\n    return (s[mid - 1] + s[mid]) / 2\n"}
+{"id": "merge_dicts_sum", "code": "def merge_dicts_sum(a, b):\n    out = dict(a)\n    for k, v in b.items():\n        out[k] = out.get(k, 0) + v\n    return out\n"}
+{"id": "merge_sorted", "code": "def merge_sorted(a, b):\n    out = []\n    i = j = 0\n    while i < len(a) and j < len(b):\n        if a[i] <= b[j]:\n            out.append(a[i]); i += 1\n        else:\n            out.append(b[j]); j += 1\n    return out + a[i:] + b[j:]\n"}
+{"id": "missing_number", "code": "def missing_number(nums):\n    n = len(nums)\n    return n * (n + 1) // 2 - sum(nums)\n"}
+{"id": "power_mod", "code": "def power_mod(base, exp, mod):\n    result = 1 % mod\n    base %= mod\n    while exp:\n        if exp & 1:\n            result = result * base % mod\n        base = base * base % mod\n        exp >>= 1\n    return result\n"}
+{"id": "prime_factors", "code": "def prime_factors(n):\n    out = []\n    d = 2\n    while d * d <= n:\n        while n % d == 0:\n            out.append(d)\n            n //= d\n        d += 1\n    if n > 1:\n        out.append(n)\n    return out\n"}
+{"id": "reverse_list", "code": "def reverse_list(values):\n    return list(reversed(values))\n"}
+{"id": "reverse_string", "code": "def reverse_string(s):\n    return s[::-1]\n"}
+{"id": "rotate_list", "code": "def rotate_list(nums, k):\n    if not nums:\n        return []\n    k %= len(nums)\n    return nums[-k:] + nums[:-k] if k else list(nums)\n"}
+{"id": "second_largest", "code": "def second_largest(nums):\n    uniq = sorted(set(nums))\n    return uniq[-2] if len(uniq) >= 2 else None\n"}
+{"id": "sorted_intersection", "code": "def sorted_intersection(a, b):\n    return sorted(set(a) & set(b))\n"}
+{"id": "string_permutations", "code": "def string_permutations(s):\n    from itertools import permutations\n    return sorted({''.join(p) for p in permutations(s)})\n"}
+{"id": "sum_digits", "code": "def sum_digits(n):\n    return sum(int(d) for d in str(n))\n"}
+{"id": "title_case", "code": "def title_case(s):\n    return ' '.join(w.capitalize() for w in s.split())\n"}
+{"id": "top_k_frequent", "code": "def top_k_frequent(nums, k):\n    counts = {}\n    for x in nums:\n        counts[x] = counts.get(x, 0) + 1\n    return sorted(counts, key=lambda x: (-counts[x], x))[:k]\n"}
+{"id": "two_sum", "code": "def two_sum(nums, target):\n    seen = {}\n    for i, x in enumerate(nums):\n        if target - x in seen:\n            return [seen[target - x], i]\n        seen[x] = i\n"}
+{"id": "word_count", "code": "def word_count(s):\n    counts = {}\n    for raw in s.lower().split():\n        w = raw.strip('.,!?')\n        if w:\n            counts[w] = counts.get(w, 0) + 1\n    return counts\n"}
+{"id": "zip_dict", "code": "def zip_dict(keys, values):\n    return dict(zip(keys, values))\n"}

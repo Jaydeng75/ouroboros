@@ -1,0 +1,5 @@
+FROM hf.co/your-username/my-self-improving-qwen
+# Usage: ollama create self-improving-ai -f training/Modelfile
+# Then score it (held-out only): 
+#   python -m ouroboros.cli run --tasks tasks/holdout_tasks.jsonl \
+#       --model self-improving-ai --out traces/holdout_gen1.jsonl
