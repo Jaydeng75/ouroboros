@@ -113,6 +113,40 @@ python -m ouroboros.cli run --tasks tasks/holdout_tasks.jsonl \
 Keep the child only if its held-out pass rate beats the frozen baseline.
 Each generation: `genN` traces -> `adapters/genN` -> holdout scorecard.
 
+## From-scratch sorting-discovery LM
+
+`scratch_lm/` is a separate experiment: a 26.4M-parameter decoder-only
+Transformer and custom BPE tokenizer trained from random initialization.
+Its synthetic Python corpus deliberately excludes ordering procedures,
+ordering APIs, and same-list inequality comparisons. The model is asked
+to arrange values only in a held-out evaluation, so a pass would indicate
+composition of learned loops, comparisons, indexing, and exchanges.
+
+The initial corpus is already generated in `scratch_data/`: 24,000 audited
+examples (22,200 train / 1,200 validation / 600 test). See
+`scratch_lm/EXPERIMENT.md` for the leakage contract and success criteria.
+
+```bash
+uv pip install -e ".[dev,train]"
+
+# Regenerate and audit the corpus.
+python -m scratch_lm.corpus --output-dir scratch_data --count 24000
+python -m scratch_lm.tokenizer --input scratch_data/train.jsonl \
+    --output scratch_data/tokenizer.json --vocab-size 2048
+
+# Free Colab/Kaggle T4 run. Use --resume after a runtime restart.
+python -m scratch_lm.train --data-dir scratch_data \
+    --output-dir scratch_runs/gen0 --preset base --steps 3000
+
+# Held-out discovery evaluation (never train on this prompt/tests).
+python -m scratch_lm.evaluate_sorting \
+    --checkpoint scratch_runs/gen0/best.pt \
+    --tokenizer scratch_runs/gen0/tokenizer.json
+```
+
+The checked-in corpus is smoke-scale (408k training tokens). Scale the
+permitted corpus before drawing conclusions from a negative result.
+
 ## Working with multiple devices
 
 Training parallelizes by shard, not by gradient. Each device trains on a
