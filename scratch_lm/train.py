@@ -139,8 +139,12 @@ def main(argv: list[str] | None = None) -> int:
     train_texts = load_texts(data_dir / "train.jsonl")
     valid_texts = load_texts(data_dir / "valid.jsonl")
     tokenizer_path = output_dir / "tokenizer.json"
+    source_tokenizer_path = data_dir / "tokenizer.json"
     if tokenizer_path.exists():
         tokenizer = BytePairTokenizer.load(tokenizer_path)
+    elif source_tokenizer_path.exists():
+        tokenizer = BytePairTokenizer.load(source_tokenizer_path)
+        tokenizer.save(tokenizer_path)
     else:
         tokenizer = BytePairTokenizer.train(train_texts, vocab_size=2048)
         tokenizer.save(tokenizer_path)

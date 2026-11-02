@@ -54,16 +54,20 @@ class BytePairTokenizer:
         token_lengths = {
             BYTE_OFFSET + value: 1 for value in range(256)
         }
+        pair_counts: Counter[tuple[int, int]] = Counter()
+        pair_locations: dict[tuple[int, int], set[int]] = {}
+        for index, sequence in enumerate(sequences):
+            for pair in zip(sequence, sequence[1:]):
+                pair_counts[pair] += 1
+                pair_locations.setdefault(pair, set()).add(index)
+
         merges: list[tuple[int, int, int]] = []
         next_id = BASE_VOCAB_SIZE
 
         while next_id < vocab_size:
-            counts: Counter[tuple[int, int]] = Counter()
-            for sequence in sequences:
-                counts.update(zip(sequence, sequence[1:]))
             allowed = [
                 (pair, frequency)
-                for pair, frequency in counts.items()
+                for pair, frequency in pair_counts.items()
                 if token_lengths[pair[0]] + token_lengths[pair[1]]
                 <= max_token_bytes
             ]
@@ -78,10 +82,23 @@ class BytePairTokenizer:
             token_lengths[next_id] = (
                 token_lengths[pair[0]] + token_lengths[pair[1]]
             )
-            sequences = [
-                cls._merge_sequence(sequence, pair, next_id)
-                for sequence in sequences
-            ]
+            affected = list(pair_locations.get(pair, set()))
+            for index in affected:
+                sequence = sequences[index]
+                for old_pair in zip(sequence, sequence[1:]):
+                    pair_counts[old_pair] -= 1
+                    if pair_counts[old_pair] <= 0:
+                        del pair_counts[old_pair]
+                    locations = pair_locations.get(old_pair)
+                    if locations is not None:
+                        locations.discard(index)
+                        if not locations:
+                            del pair_locations[old_pair]
+                merged_sequence = cls._merge_sequence(sequence, pair, next_id)
+                sequences[index] = merged_sequence
+                for new_pair in zip(merged_sequence, merged_sequence[1:]):
+                    pair_counts[new_pair] += 1
+                    pair_locations.setdefault(new_pair, set()).add(index)
             next_id += 1
         return cls(merges)
 
@@ -167,9 +184,17 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--output", default="scratch_data/tokenizer.json")
     parser.add_argument("--vocab-size", type=int, default=2048)
     parser.add_argument("--max-token-bytes", type=int, default=16)
+    parser.add_argument(
+        "--max-texts",
+        type=int,
+        default=None,
+        help="Train merges on at most this many leading texts",
+    )
     args = parser.parse_args(argv)
 
     texts = load_texts(Path(args.input))
+    if args.max_texts is not None:
+        texts = texts[: args.max_texts]
     tokenizer = BytePairTokenizer.train(
         texts,
         vocab_size=args.vocab_size,

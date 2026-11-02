@@ -147,6 +147,29 @@ python -m scratch_lm.evaluate_sorting \
 The checked-in corpus is smoke-scale (408k training tokens). Scale the
 permitted corpus before drawing conclusions from a negative result.
 
+Corpus v2 is generated under `scratch_data_v2/`: 250,000 examples
+(231,250 train / 12,500 validation / 6,250 test), including compositional
+and multi-function examples, with 5,277,448 training tokens. Its BPE
+tokenizer was trained on a representative 25,000-text sample from the v2
+training split. Regenerate it with:
+
+```bash
+python -m scratch_lm.corpus --output-dir scratch_data_v2 \
+    --count 250000 --version 2
+python -m scratch_lm.tokenizer --input scratch_data_v2/train.jsonl \
+    --output scratch_data_v2/tokenizer.json --vocab-size 2048 \
+    --max-texts 25000
+```
+
+Measure ordinary code generation before rerunning the discovery test:
+
+```bash
+python -m scratch_lm.benchmark \
+    --checkpoint scratch_runs/gen0/best.pt \
+    --tokenizer scratch_runs/gen0/tokenizer.json \
+    --samples-per-task 3
+```
+
 ## Working with multiple devices
 
 Training parallelizes by shard, not by gradient. Each device trains on a

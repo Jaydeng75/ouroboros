@@ -144,6 +144,45 @@ def _classes(rng: random.Random) -> Example:
     return Example(rng.choice(templates), "classes")
 
 
+def _compositional(rng: random.Random) -> Example:
+    values = [rng.randint(-12, 35) for _ in range(rng.randint(4, 8))]
+    cutoff = rng.randint(0, 15)
+    scale = rng.choice([2, 3, 4])
+    function = rng.choice(
+        ["filter_scale_reverse", "select_transform_flip", "screen_amplify_turn"]
+    )
+    templates = [
+        f"def {function}(values, cutoff):\n    selected = []\n    for value in values:\n        if value > cutoff:\n            selected.append(value * {scale})\n    result = []\n    for index in range(len(selected) - 1, -1, -1):\n        result.append(selected[index])\n    return result\n\n\ndata = {function}({values!r}, {cutoff})\n",
+        f"def count_and_total_above(values, cutoff):\n    count = 0\n    total = 0\n    for value in values:\n        transformed = value + {scale}\n        if transformed > cutoff:\n            count += 1\n            total += transformed\n    return count, total\n\n\ndata = count_and_total_above({values!r}, {cutoff})\n",
+        "def scale_item_counts(items, factor):\n    counts = {}\n    for item in items:\n        counts[item] = counts.get(item, 0) + 1\n    scaled = {}\n    for key, value in counts.items():\n        scaled[key] = value * factor\n    return scaled\n\n\ndata = scale_item_counts(['red', 'blue', 'red'], "
+        + str(scale)
+        + ")\n",
+        f"def flatten_grid(grid):\n    result = []\n    for row in grid:\n        for value in row:\n            result.append(value)\n    return result\n\n\ndata = flatten_grid([[1, 2], [3, 4], [5, 6]])\n",
+        f"def exchange_ends_and_total(values):\n    result = list(values)\n    if len(result) >= 2:\n        result[0], result[-1] = result[-1], result[0]\n    total = 0\n    for value in result:\n        total += value\n    return result, total\n\n\ndata = exchange_ends_and_total({values!r})\n",
+        f"def digits_then_count(text):\n    digits = ''\n    for character in text:\n        if character.isdigit():\n            digits += character\n    counts = {{}}\n    for character in digits:\n        counts[character] = counts.get(character, 0) + 1\n    return digits, counts\n\n\ndata = digits_then_count('a12b{values[0]}c2')\n",
+    ]
+    return Example(
+        rng.choice(templates),
+        "compositional",
+        "synthetic-self-authored-v2",
+    )
+
+
+def _multi_function(rng: random.Random) -> Example:
+    values = [rng.randint(1, 15) for _ in range(rng.randint(3, 6))]
+    templates = [
+        f"def square_value(value):\n    return value * value\n\n\ndef sum_squares(values):\n    total = 0\n    for value in values:\n        total += square_value(value)\n    return total\n\n\ndata = sum_squares({values!r})\n",
+        "def repeat_character(character, times):\n    result = ''\n    for _ in range(times):\n        result += character\n    return result\n\n\ndef build_marks(count):\n    return repeat_character('#', count) + repeat_character('.', count)\n\n\ndata = build_marks(3)\n",
+        f"def factorial_value(number):\n    result = 1\n    for factor in range(2, number + 1):\n        result *= factor\n    return result\n\n\ndef factorial_list(values):\n    result = []\n    for value in values:\n        result.append(factorial_value(value))\n    return result\n\n\ndata = factorial_list({values!r})\n",
+        f"def keep_text_digits(text):\n    result = ''\n    for character in text:\n        if character.isdigit():\n            result += character\n    return result\n\n\ndef digit_total(text):\n    total = 0\n    for character in keep_text_digits(text):\n        total += int(character)\n    return total\n\n\ndata = digit_total('room42code7')\n",
+    ]
+    return Example(
+        rng.choice(templates),
+        "multi_function",
+        "synthetic-self-authored-v2",
+    )
+
+
 _GENERATORS = [
     _arithmetic,
     _branches,
@@ -157,17 +196,26 @@ _GENERATORS = [
     _classes,
 ]
 
+_V2_GENERATORS = [_compositional, _multi_function]
 
-def generate_examples(count: int = 24000, seed: int = 20261101) -> list[Example]:
+
+def generate_examples(
+    count: int = 24000,
+    seed: int = 20261101,
+    version: int = 1,
+) -> list[Example]:
     if count <= 0:
         raise ValueError("count must be positive")
+    if version not in (1, 2):
+        raise ValueError("version must be 1 or 2")
+    generators = _GENERATORS + (_V2_GENERATORS if version == 2 else [])
     rng = random.Random(seed)
     examples: list[Example] = []
     seen: set[str] = set()
     attempts = 0
     while len(examples) < count and attempts < count * 30:
         attempts += 1
-        example = rng.choice(_GENERATORS)(rng)
+        example = rng.choice(generators)(rng)
         if example.text in seen:
             continue
         compile(example.text, "<corpus>", "exec")
@@ -187,8 +235,13 @@ def split_name(index: int) -> str:
     return "train"
 
 
-def write_corpus(output_dir: Path, count: int, seed: int) -> dict:
-    examples = generate_examples(count=count, seed=seed)
+def write_corpus(
+    output_dir: Path,
+    count: int,
+    seed: int,
+    version: int = 1,
+) -> dict:
+    examples = generate_examples(count=count, seed=seed, version=version)
     records = [example.__dict__ for example in examples]
     report = audit_records(records)
     if report["rejected"]:
@@ -210,6 +263,7 @@ def write_corpus(output_dir: Path, count: int, seed: int) -> dict:
             handle.close()
 
     manifest = {
+        "version": version,
         "seed": seed,
         "requested": count,
         "counts": counts,
@@ -230,8 +284,13 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--output-dir", default="scratch_data")
     parser.add_argument("--count", type=int, default=24000)
     parser.add_argument("--seed", type=int, default=20261101)
+    parser.add_argument("--version", type=int, choices=(1, 2), default=1)
     args = parser.parse_args(argv)
-    print(write_corpus(Path(args.output_dir), args.count, args.seed))
+    print(
+        write_corpus(
+            Path(args.output_dir), args.count, args.seed, version=args.version
+        )
+    )
     return 0
 
 
