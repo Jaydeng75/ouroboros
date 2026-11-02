@@ -11,6 +11,7 @@ import argparse
 import hashlib
 import json
 import random
+import re
 import sys
 from dataclasses import dataclass
 from pathlib import Path
@@ -199,6 +200,24 @@ _GENERATORS = [
 _V2_GENERATORS = [_compositional, _multi_function]
 
 
+_DEF_LINE = re.compile(r"^def ([A-Za-z_][A-Za-z0-9_]*)\([^\n]*\):\n")
+
+
+def _insert_docstring(text: str, rng: random.Random) -> str:
+    match = _DEF_LINE.match(text)
+    if not match:
+        return text
+    phrase = " ".join(match.group(1).split("_"))
+    doc = rng.choice(
+        [
+            f"{phrase.capitalize()}.",
+            f"Perform {phrase}.",
+            f"Compute {phrase}.",
+        ]
+    )
+    return text[: match.end()] + f'    """{doc}"""\n' + text[match.end() :]
+
+
 def generate_examples(
     count: int = 24000,
     seed: int = 20261101,
@@ -206,9 +225,9 @@ def generate_examples(
 ) -> list[Example]:
     if count <= 0:
         raise ValueError("count must be positive")
-    if version not in (1, 2):
-        raise ValueError("version must be 1 or 2")
-    generators = _GENERATORS + (_V2_GENERATORS if version == 2 else [])
+    if version not in (1, 2, 3):
+        raise ValueError("version must be 1, 2, or 3")
+    generators = _GENERATORS + (_V2_GENERATORS if version >= 2 else [])
     rng = random.Random(seed)
     examples: list[Example] = []
     seen: set[str] = set()
@@ -216,6 +235,12 @@ def generate_examples(
     while len(examples) < count and attempts < count * 30:
         attempts += 1
         example = rng.choice(generators)(rng)
+        if version == 3 and rng.random() < 0.75:
+            updated = _insert_docstring(example.text, rng)
+            if updated != example.text:
+                example = Example(
+                    updated, example.family, "synthetic-self-authored-v3"
+                )
         if example.text in seen:
             continue
         compile(example.text, "<corpus>", "exec")
@@ -284,7 +309,7 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--output-dir", default="scratch_data")
     parser.add_argument("--count", type=int, default=24000)
     parser.add_argument("--seed", type=int, default=20261101)
-    parser.add_argument("--version", type=int, choices=(1, 2), default=1)
+    parser.add_argument("--version", type=int, choices=(1, 2, 3), default=1)
     args = parser.parse_args(argv)
     print(
         write_corpus(

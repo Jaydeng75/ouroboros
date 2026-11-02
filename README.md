@@ -161,6 +161,20 @@ python -m scratch_lm.tokenizer --input scratch_data_v2/train.jsonl \
     --max-texts 25000
 ```
 
+Corpus v3 (`scratch_data_v3/`) keeps the v2 scale but rewrites about
+75% of examples into the evaluation shape: a top-level function signature
+followed by a one-line docstring describing the behavior, then the body.
+This fixes the train/test format mismatch seen in generation 1, where
+docstring prompts were out-of-distribution. Regenerate with:
+
+```bash
+python -m scratch_lm.corpus --output-dir scratch_data_v3 \
+    --count 250000 --version 3
+python -m scratch_lm.tokenizer --input scratch_data_v3/train.jsonl \
+    --output scratch_data_v3/tokenizer.json --vocab-size 2048 \
+    --max-texts 25000
+```
+
 Measure ordinary code generation before rerunning the discovery test:
 
 ```bash

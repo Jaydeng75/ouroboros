@@ -28,6 +28,17 @@ def test_corpus_v2_adds_compositional_examples_without_leakage():
     assert report["rejected"] == []
 
 
+def test_corpus_v3_is_docstring_conditioned_without_leakage():
+    examples = generate_examples(count=600, seed=321, version=3)
+    with_docstring = sum('"""' in example.text for example in examples)
+    assert with_docstring >= 300
+    assert len({example.text for example in examples}) == 600
+    report = audit_records([example.__dict__ for example in examples])
+    assert report["rejected"] == []
+    for example in examples:
+        compile(example.text, "<v3>", "exec")
+
+
 def test_intermediate_benchmark_tasks_are_solvable_and_summarized():
     solutions = {
         "copy_values": "def copy_values(values):\n    result = []\n    for value in values:\n        result.append(value)\n    return result\n",
