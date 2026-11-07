@@ -54,6 +54,13 @@ class BytePairTokenizer:
         token_lengths = {
             BYTE_OFFSET + value: 1 for value in range(256)
         }
+        # A merged token may never contain a newline (except the single
+        # newline byte itself). Otherwise tokenizing a prompt on its own
+        # produces a token tail that never occurs inside full training
+        # texts, and generation starts from an unseen state.
+        token_has_newline = {
+            BYTE_OFFSET + value: value == 0x0A for value in range(256)
+        }
         pair_counts: Counter[tuple[int, int]] = Counter()
         pair_locations: dict[tuple[int, int], set[int]] = {}
         for index, sequence in enumerate(sequences):
@@ -70,6 +77,8 @@ class BytePairTokenizer:
                 for pair, frequency in pair_counts.items()
                 if token_lengths[pair[0]] + token_lengths[pair[1]]
                 <= max_token_bytes
+                and not token_has_newline[pair[0]]
+                and not token_has_newline[pair[1]]
             ]
             if not allowed:
                 break
@@ -82,6 +91,7 @@ class BytePairTokenizer:
             token_lengths[next_id] = (
                 token_lengths[pair[0]] + token_lengths[pair[1]]
             )
+            token_has_newline[next_id] = False
             affected = list(pair_locations.get(pair, set()))
             for index in affected:
                 sequence = sequences[index]

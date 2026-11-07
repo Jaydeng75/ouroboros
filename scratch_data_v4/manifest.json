@@ -1,0 +1,17 @@
+{
+  "version": 4,
+  "seed": 20261101,
+  "requested": 24000,
+  "counts": {
+    "train": 22200,
+    "valid": 1200,
+    "test": 600
+  },
+  "audit": {
+    "checked": 24000,
+    "accepted": 24000,
+    "rejected": 0
+  },
+  "sha256": "8eaa68bd1d449f286e58e55a8afde1ce1fe0008f70f77cdfb22614721d71b8f4",
+  "policy": "No sorting vocabulary, ordering APIs, ordering imports, or same-list element comparisons."
+}

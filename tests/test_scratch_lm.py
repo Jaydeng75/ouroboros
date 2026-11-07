@@ -39,6 +39,33 @@ def test_corpus_v3_is_docstring_conditioned_without_leakage():
         compile(example.text, "<v3>", "exec")
 
 
+def test_corpus_v4_is_completion_formatted_balanced_and_leakage_controlled():
+    import ast
+    from collections import Counter
+
+    examples = generate_examples(count=800, seed=777, version=4)
+    assert len({example.text for example in examples}) == 800
+    report = audit_records([example.__dict__ for example in examples])
+    assert report["rejected"] == []
+
+    names = set()
+    for example in examples:
+        tree = ast.parse(example.text)
+        # Exactly one top-level function: signature + docstring + body only.
+        assert len(tree.body) == 1
+        assert isinstance(tree.body[0], ast.FunctionDef)
+        names.add(tree.body[0].name)
+        lines = example.text.splitlines()
+        assert lines[0].startswith("def ")
+        assert '"""' in lines[1]
+        # No trailing example-call block for the model to imitate.
+        assert "\n\n\n" not in example.text
+    # Parameterized names/structures, not a handful of memorized templates.
+    assert len(names) >= 40
+    family_counts = Counter(example.family for example in examples)
+    assert max(family_counts.values()) <= 0.25 * len(examples)
+
+
 def test_intermediate_benchmark_tasks_are_solvable_and_summarized():
     solutions = {
         "copy_values": "def copy_values(values):\n    result = []\n    for value in values:\n        result.append(value)\n    return result\n",
@@ -101,6 +128,25 @@ def test_bpe_tokenizer_roundtrip_and_determinism():
     assert first.decode(first.encode(sample)) == sample
     assert first.vocab_size <= 320
     assert max(len(value) for value in first.token_bytes.values()) <= 16
+
+
+def test_bpe_never_merges_across_newlines_and_prompt_stays_a_prefix():
+    texts = [
+        "def add(a, b):\n    return a + b\n",
+        "def double(value):\n    result = value * 2\n    return result\n",
+    ] * 30
+    tokenizer = BytePairTokenizer.train(texts, vocab_size=320)
+    # No token may contain a newline except the single newline byte itself,
+    # so a prompt tokenized alone keeps the same tokens inside a full text.
+    assert all(
+        b"\n" not in value or value == b"\n"
+        for value in tokenizer.token_bytes.values()
+    )
+    prompt = "def add(a, b):\n    return a + b\n"
+    prompt_ids = tokenizer.encode(prompt, add_special=False)
+    full_ids = tokenizer.encode(prompt + "answer = add(2, 3)\n", add_special=False)
+    assert full_ids[: len(prompt_ids)] == prompt_ids
+    assert tokenizer.decode(tokenizer.encode(prompt)) == prompt
 
 
 def test_transformer_forward_and_generation():

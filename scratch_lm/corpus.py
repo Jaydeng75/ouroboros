@@ -184,6 +184,396 @@ def _multi_function(rng: random.Random) -> Example:
     )
 
 
+def _completion(name: str, params: str, doc: str, body: list[str]) -> str:
+    lines = [f"def {name}({params}):", f'    """{doc}"""']
+    lines.extend(("    " + line) if line else "" for line in body)
+    return "\n".join(lines) + "\n"
+
+
+def _out_name(rng: random.Random) -> str:
+    return rng.choice(["result", "output", "collected", "answer"])
+
+
+def _v4_copy(rng: random.Random) -> Example:
+    noun = rng.choice(["values", "items", "numbers", "entries"])
+    each = {"values": "value", "items": "item", "numbers": "number", "entries": "entry"}[noun]
+    name = rng.choice(["copy", "clone", "duplicate", "replicate"]) + "_" + noun
+    out = _out_name(rng)
+    idiom = rng.randrange(4)
+    if idiom == 0:
+        body = [f"{out} = []", f"for {each} in {noun}:", f"    {out}.append({each})", f"return {out}"]
+    elif idiom == 1:
+        body = [f"return list({noun})"]
+    elif idiom == 2:
+        body = [f"return [{each} for {each} in {noun}]"]
+    else:
+        body = [f"{out} = []", f"for index in range(len({noun})):", f"    {out}.append({noun}[index])", f"return {out}"]
+    return Example(
+        _completion(name, noun, "Return a new list containing the same values in the same sequence.", body),
+        "completion_copy",
+        "synthetic-self-authored-v4",
+    )
+
+
+def _v4_transform(rng: random.Random) -> Example:
+    noun = rng.choice(["values", "items", "numbers", "entries"])
+    each = {"values": "value", "items": "item", "numbers": "number", "entries": "entry"}[noun]
+    out = _out_name(rng)
+    if rng.random() < 0.5:
+        factor = rng.randint(2, 6)
+        name = rng.choice(["scale", "multiply", "amplify", "expand"]) + "_" + noun
+        doc = f"Return a new list where every value is multiplied by {factor}."
+        expr = f"{each} * {factor}"
+    else:
+        factor = rng.randint(1, 9)
+        name = rng.choice(["increase", "raise", "boost", "grow"]) + "_" + noun
+        doc = f"Return a new list where {factor} is added to every value."
+        expr = f"{each} + {factor}"
+    if rng.random() < 0.5:
+        body = [f"{out} = []", f"for {each} in {noun}:", f"    {out}.append({expr})", f"return {out}"]
+    else:
+        body = [f"return [{expr} for {each} in {noun}]"]
+    return Example(_completion(name, noun, doc, body), "completion_transform", "synthetic-self-authored-v4")
+
+
+def _v4_filter(rng: random.Random) -> Example:
+    noun = rng.choice(["values", "items", "numbers", "entries"])
+    each = {"values": "value", "items": "item", "numbers": "number", "entries": "entry"}[noun]
+    mode = rng.randrange(4)
+    if mode == 0:
+        name = rng.choice(["keep_above", "retain_over", "hold_greater", "select_above"])
+        doc = "Return values strictly greater than cutoff, preserving sequence."
+        params, condition = f"{noun}, cutoff", f"{each} > cutoff"
+    elif mode == 3:
+        name = rng.choice(["keep_below", "retain_under", "hold_lower", "select_below"])
+        doc = "Return values strictly less than cutoff, preserving sequence."
+        params, condition = f"{noun}, cutoff", f"{each} < cutoff"
+    elif mode == 1:
+        name = rng.choice(["keep_positive", "retain_positive", "select_positive"])
+        doc = "Return the positive values, preserving sequence."
+        params, condition = noun, f"{each} > 0"
+    else:
+        name = rng.choice(["keep_even", "retain_even", "select_even"])
+        doc = "Return the even values, preserving sequence."
+        params, condition = noun, f"{each} % 2 == 0"
+    out = _out_name(rng)
+    if rng.random() < 0.5:
+        body = [f"{out} = []", f"for {each} in {noun}:", f"    if {condition}:", f"        {out}.append({each})", f"return {out}"]
+    else:
+        body = [f"return [{each} for {each} in {noun} if {condition}]"]
+    return Example(_completion(name, params, doc, body), "completion_filter", "synthetic-self-authored-v4")
+
+
+def _v4_aggregate(rng: random.Random) -> Example:
+    noun = rng.choice(["values", "items", "numbers", "entries"])
+    each = {"values": "value", "items": "item", "numbers": "number", "entries": "entry"}[noun]
+    acc = rng.choice(["total", "amount", "overall", "running_total"])
+    tally = rng.choice(["count", "tally", "seen", "matches"])
+    mode = rng.randrange(6)
+    if mode == 4:
+        name = rng.choice(["product_values", "multiply_numbers", "product_of_entries"])
+        doc, body = "Return the product of all values.", [f"{acc} = 1", f"for {each} in {noun}:", f"    {acc} *= {each}", f"return {acc}"]
+        return Example(_completion(name, noun, doc, body), "completion_aggregate", "synthetic-self-authored-v4")
+    if mode == 5:
+        name = rng.choice(["count_above", "tally_above", "count_over"])
+        doc, body = "Return how many values are greater than cutoff.", [f"{tally} = 0", f"for {each} in {noun}:", f"    if {each} > cutoff:", f"        {tally} += 1", f"return {tally}"]
+        return Example(_completion(name, f"{noun}, cutoff", doc, body), "completion_aggregate", "synthetic-self-authored-v4")
+    if mode == 0:
+        name = rng.choice(["total_values", "sum_numbers", "add_entries", "total_items"])
+        doc, body = "Return the sum of all values.", [f"{acc} = 0", f"for {each} in {noun}:", f"    {acc} += {each}", f"return {acc}"]
+    elif mode == 1:
+        name = rng.choice(["count_even", "count_even_values", "tally_even"])
+        doc, body = "Return how many values are even.", [f"{tally} = 0", f"for {each} in {noun}:", f"    if {each} % 2 == 0:", f"        {tally} += 1", f"return {tally}"]
+    elif mode == 2:
+        name = rng.choice(["count_positive", "tally_positive", "count_above_zero"])
+        doc, body = "Return how many values are positive.", [f"{tally} = 0", f"for {each} in {noun}:", f"    if {each} > 0:", f"        {tally} += 1", f"return {tally}"]
+    else:
+        name = rng.choice(["square_total", "sum_of_squares", "squared_sum"])
+        doc, body = "Return the sum of the squares of the values.", [f"{acc} = 0", f"for {each} in {noun}:", f"    {acc} += {each} * {each}", f"return {acc}"]
+    return Example(_completion(name, noun, doc, body), "completion_aggregate", "synthetic-self-authored-v4")
+
+
+def _v4_string(rng: random.Random) -> Example:
+    text_name = rng.choice(["text", "word", "phrase"])
+    char_name = rng.choice(["character", "letter", "symbol"])
+    out = _out_name(rng)
+    mode = rng.randrange(7)
+    if mode == 5:
+        name = rng.choice(["count_digits", "tally_digits", "digit_count"])
+        doc = "Return how many digit characters appear in the text."
+        tally = rng.choice(["count", "tally", "seen"])
+        body = [f"{tally} = 0", f"for {char_name} in {text_name}:", f"    if {char_name}.isdigit():", f"        {tally} += 1", f"return {tally}"]
+        return Example(_completion(name, text_name, doc, body), "completion_string", "synthetic-self-authored-v4")
+    if mode == 6:
+        name = rng.choice(["make_upper", "upper_text", "shout_text"])
+        doc = "Return the text in uppercase letters."
+        body = [f"return {text_name}.upper()"]
+        return Example(_completion(name, text_name, doc, body), "completion_string", "synthetic-self-authored-v4")
+    if mode == 0:
+        name = rng.choice(["repeat_characters", "double_letters", "echo_characters"])
+        factor = rng.choice([2, 3])
+        doc = f"Return the text with every character repeated {factor} times."
+        body = [f"{out} = ''", f"for {char_name} in {text_name}:", f"    {out} += {char_name} * {factor}", f"return {out}"]
+        params = text_name
+    elif mode == 1:
+        name = rng.choice(["count_vowels", "tally_vowels", "vowel_count"])
+        doc = "Return how many vowels appear in the text."
+        tally = rng.choice(["count", "tally", "seen"])
+        body = [f"{tally} = 0", f"for {char_name} in {text_name}.lower():", f"    if {char_name} in 'aeiou':", f"        {tally} += 1", f"return {tally}"]
+        params = text_name
+    elif mode == 2:
+        name = rng.choice(["extract_digits", "keep_digits", "digits_only"])
+        doc = "Return only the digit characters from the text."
+        body = [f"{out} = ''", f"for {char_name} in {text_name}:", f"    if {char_name}.isdigit():", f"        {out} += {char_name}", f"return {out}"]
+        params = text_name
+    elif mode == 3:
+        name = rng.choice(["reverse_text", "flip_text", "backward_text"])
+        doc = "Return the text in reverse sequence."
+        body = [f"{out} = ''", f"for {char_name} in {text_name}:", f"    {out} = {char_name} + {out}", f"return {out}"]
+        params = text_name
+    else:
+        name = rng.choice(["count_character", "tally_character", "count_letter"])
+        doc = "Return how many times the target character appears."
+        tally = rng.choice(["count", "tally", "seen"])
+        body = [f"{tally} = 0", f"for {char_name} in {text_name}:", f"    if {char_name} == target:", f"        {tally} += 1", f"return {tally}"]
+        params = f"{text_name}, target"
+    return Example(_completion(name, params, doc, body), "completion_string", "synthetic-self-authored-v4")
+
+
+def _v4_dict(rng: random.Random) -> Example:
+    mode = rng.randrange(4)
+    counts_name = rng.choice(["counts", "tally", "totals", "frequencies"])
+    if mode == 3:
+        name = rng.choice(["dictionary_keys", "keys_of_table", "entry_keys"])
+        doc = "Return a list of the keys stored in the table."
+        table_name = rng.choice(["table", "record", "mapping"])
+        body = [f"return list({table_name})"]
+        return Example(_completion(name, table_name, doc, body), "completion_dict", "synthetic-self-authored-v4")
+    if mode == 0:
+        name = rng.choice(["count_items", "tally_items", "count_entries", "tally_repeats"])
+        doc = "Return a dictionary counting how often each item appears."
+        body = [f"{counts_name} = {{}}", "for item in items:", f"    {counts_name}[item] = {counts_name}.get(item, 0) + 1", f"return {counts_name}"]
+        params = "items"
+    elif mode == 1:
+        name = rng.choice(["combine_counts", "merge_counts", "add_counts"])
+        doc = "Return one dictionary with the counts from both dictionaries added."
+        body = [f"{counts_name} = dict(left)", "for key, value in right.items():", f"    {counts_name}[key] = {counts_name}.get(key, 0) + value", f"return {counts_name}"]
+        params = "left, right"
+    else:
+        name = rng.choice(["lookup_or_default", "fetch_or_fallback", "get_or_default"])
+        doc = "Return the stored value for the key, or the fallback when absent."
+        body = ["if key in values:", "    return values[key]", "return fallback"]
+        params = "values, key, fallback"
+    return Example(_completion(name, params, doc, body), "completion_dict", "synthetic-self-authored-v4")
+
+
+def _v4_math(rng: random.Random) -> Example:
+    mode = rng.randrange(7)
+    if mode == 4:
+        name = rng.choice(["triangle_area", "area_of_triangle"])
+        doc = "Return the area of a triangle with the given base and height."
+        return Example(_completion(name, "base, height", doc, ["return base * height / 2"]), "completion_math", "synthetic-self-authored-v4")
+    if mode == 5:
+        name = rng.choice(["cube_value", "cubed_value", "cube_of"])
+        doc = "Return the cube of the number."
+        return Example(_completion(name, "number", doc, ["return number * number * number"]), "completion_math", "synthetic-self-authored-v4")
+    if mode == 6:
+        name = rng.choice(["average_pair", "mean_of_pair", "pair_average"])
+        doc = "Return the average of the two values."
+        return Example(_completion(name, "left, right", doc, ["return (left + right) / 2"]), "completion_math", "synthetic-self-authored-v4")
+    if mode == 0:
+        name = rng.choice(["factorial_of", "factorial_value", "compute_factorial"])
+        doc = "Return the factorial of a non-negative integer."
+        out = _out_name(rng)
+        if rng.random() < 0.5:
+            body = [f"{out} = 1", "for factor in range(2, number + 1):", f"    {out} *= factor", f"return {out}"]
+        else:
+            body = ["if number <= 1:", "    return 1", f"return number * {name}(number - 1)"]
+        params = "number"
+    elif mode == 1:
+        name = rng.choice(["power_value", "raise_power", "compute_power"])
+        doc = "Return the base raised to the exponent."
+        out = _out_name(rng)
+        if rng.random() < 0.5:
+            body = [f"{out} = 1", "for _ in range(exponent):", f"    {out} *= base", f"return {out}"]
+        else:
+            body = ["return base ** exponent"]
+        params = "base, exponent"
+    elif mode == 2:
+        name = rng.choice(["rectangle_area", "area_of_rectangle", "box_area"])
+        doc = "Return the area of a rectangle with the given sides."
+        body = ["return width * height"]
+        params = "width, height"
+    else:
+        name = rng.choice(["apply_discount", "discounted_price", "price_after_discount"])
+        doc = "Return the price after subtracting the given percentage."
+        body = ["discount = price * percent / 100", "return price - discount"]
+        params = "price, percent"
+    return Example(_completion(name, params, doc, body), "completion_math", "synthetic-self-authored-v4")
+
+
+def _v4_grid(rng: random.Random) -> Example:
+    mode = rng.randrange(5)
+    rows_name, cols_name = rng.choice([("rows", "columns"), ("height", "width")])
+    acc = rng.choice(["total", "amount", "overall"])
+    out = _out_name(rng)
+    grid_name = rng.choice(["grid", "table", "board"])
+    if mode == 0:
+        name = rng.choice(["grid_total", "grid_sum", "table_total"])
+        if rng.random() < 0.5:
+            doc = "Return the sum of row index times column index over a zero-based grid."
+            expr = "row * column"
+        else:
+            doc = "Return the sum of row index plus column index over a zero-based grid."
+            expr = "row + column"
+        body = [f"{acc} = 0", f"for row in range({rows_name}):", f"    for column in range({cols_name}):", f"        {acc} += {expr}", f"return {acc}"]
+        params = f"{rows_name}, {cols_name}"
+    elif mode == 4:
+        name = rng.choice(["count_cells", "cell_count", "grid_cells"])
+        doc = "Return how many cells the grid shape contains."
+        return Example(_completion(name, f"{rows_name}, {cols_name}", doc, [f"return {rows_name} * {cols_name}"]), "completion_grid", "synthetic-self-authored-v4")
+    elif mode == 1:
+        name = rng.choice(["make_grid", "build_grid", "create_grid"])
+        doc = "Return a grid with the given shape filled with the fill value."
+        body = [f"{grid_name} = []", f"for _ in range({rows_name}):", f"    {grid_name}.append([fill] * {cols_name})", f"return {grid_name}"]
+        params = f"{rows_name}, {cols_name}, fill"
+    elif mode == 2:
+        name = rng.choice(["flatten_grid", "flatten_table", "grid_to_list"])
+        doc = "Return all grid values as one flat list, row by row."
+        body = [f"{out} = []", f"for row in {grid_name}:", "    for value in row:", f"        {out}.append(value)", f"return {out}"]
+        params = grid_name
+    else:
+        name = rng.choice(["multiplication_row", "times_row", "product_row"])
+        doc = "Return the products of the number with each factor up to the limit."
+        body = ["row = []", "for factor in range(1, limit + 1):", "    row.append(number * factor)", "return row"]
+        params = "number, limit"
+    return Example(_completion(name, params, doc, body), "completion_grid", "synthetic-self-authored-v4")
+
+
+def _v4_positions(rng: random.Random) -> Example:
+    mode = rng.randrange(6)
+    out = _out_name(rng)
+    if mode == 4:
+        name = rng.choice(["first_half", "leading_half", "front_half"])
+        doc = "Return the first half of the values."
+        return Example(_completion(name, "values", doc, ["return values[:len(values) // 2]"]), "completion_positions", "synthetic-self-authored-v4")
+    if mode == 5:
+        name = rng.choice(["take_first", "leading_values", "first_entries"])
+        doc = "Return the first count values."
+        return Example(_completion(name, "values, count", doc, ["return values[:count]"]), "completion_positions", "synthetic-self-authored-v4")
+    if mode == 0:
+        name = rng.choice(["exchange_positions", "swap_positions", "trade_positions"])
+        doc = "Return a copy with the positions first and second exchanged."
+        body = [f"{out} = list(values)", f"{out}[first], {out}[second] = {out}[second], {out}[first]", f"return {out}"]
+        params = "values, first, second"
+    elif mode == 1:
+        name = rng.choice(["swap_ends", "exchange_ends", "trade_ends"])
+        doc = "Return a copy with the first and last values exchanged."
+        body = [f"{out} = list(values)", f"if len({out}) >= 2:", f"    {out}[0], {out}[-1] = {out}[-1], {out}[0]", f"return {out}"]
+        params = "values"
+    elif mode == 2:
+        name = rng.choice(["reverse_values", "flip_values", "backward_values"])
+        doc = "Return a new list with the values in reverse sequence."
+        body = [f"{out} = []", "for index in range(len(values) - 1, -1, -1):", f"    {out}.append(values[index])", f"return {out}"]
+        params = "values"
+    else:
+        name = rng.choice(["every_second", "alternate_values", "skip_values"])
+        doc = "Return every second value, starting with the first."
+        body = [f"{out} = []", "for index in range(0, len(values), 2):", f"    {out}.append(values[index])", f"return {out}"]
+        params = "values"
+    return Example(_completion(name, params, doc, body), "completion_positions", "synthetic-self-authored-v4")
+
+
+def _v4_conditional(rng: random.Random) -> Example:
+    mode = rng.randrange(6)
+    if mode == 4:
+        name = rng.choice(["is_positive", "check_positive", "number_is_positive"])
+        doc = "Return True when the number is positive."
+        return Example(_completion(name, "number", doc, ["return number > 0"]), "completion_conditional", "synthetic-self-authored-v4")
+    if mode == 5:
+        name = rng.choice(["sign_label", "number_sign", "sign_of"])
+        doc = "Return a short label for the sign of the number."
+        body = ["if number > 0:", "    return 'positive'", "if number < 0:", "    return 'negative'", "return 'zero'"]
+        return Example(_completion(name, "number", doc, body), "completion_conditional", "synthetic-self-authored-v4")
+    if mode == 0:
+        name = rng.choice(["is_even", "check_even", "number_is_even"])
+        doc = "Return True when the number is even."
+        body = ["return number % 2 == 0"]
+        params = "number"
+    elif mode == 1:
+        name = rng.choice(["absolute_value", "magnitude_of", "positive_value"])
+        doc = "Return the number without its sign."
+        body = ["if number < 0:", "    return -number", "return number"]
+        params = "number"
+    elif mode == 2:
+        name = rng.choice(["grade_band", "score_band", "mark_band"])
+        doc = "Return the letter band for the score."
+        top, mid, low = rng.choice([(90, 75, 60), (85, 70, 55), (80, 65, 50)])
+        body = [f"if score >= {top}:", "    return 'A'", f"if score >= {mid}:", "    return 'B'", f"if score >= {low}:", "    return 'C'", "return 'D'"]
+        params = "score"
+    else:
+        name = rng.choice(["describe_temperature", "temperature_label", "weather_label"])
+        doc = "Return a short label describing the temperature."
+        freeze, mild = rng.choice([(0, 25), (0, 20), (5, 30)])
+        body = [f"if celsius <= {freeze}:", "    return 'freezing'", f"if celsius < {mild}:", "    return 'mild'", "return 'warm'"]
+        params = "celsius"
+    return Example(_completion(name, params, doc, body), "completion_conditional", "synthetic-self-authored-v4")
+
+
+_V4_BUILDERS = [
+    _v4_copy,
+    _v4_transform,
+    _v4_filter,
+    _v4_aggregate,
+    _v4_string,
+    _v4_dict,
+    _v4_math,
+    _v4_grid,
+    _v4_positions,
+    _v4_conditional,
+]
+
+
+def _generate_v4(count: int, seed: int) -> list[Example]:
+    """Completion-formatted corpus: signature + docstring + body, then stop.
+
+    Unlike v1-v3 there is no trailing example-call line (the behaviour gen2
+    imitated instead of writing a body), function/variable names and body
+    idioms are parameterized instead of drawn from a few fixed templates,
+    and archetypes are served round-robin so no family dominates.
+    """
+    rng = random.Random(seed)
+    examples: list[Example] = []
+    seen: set[str] = set()
+    attempts = 0
+    comments = [
+        "Work through the values one at a time.",
+        "Build the answer step by step.",
+        "Use a loop to process each part.",
+        "Keep track of the running result.",
+        "Check each value as it arrives.",
+        "Collect the pieces into the answer.",
+        "Handle each part in turn.",
+        "Start from an empty answer.",
+    ]
+    while len(examples) < count and attempts < count * 40:
+        attempts += 1
+        example = _V4_BUILDERS[attempts % len(_V4_BUILDERS)](rng)
+        if rng.random() < 0.8:
+            head, _, tail = example.text.partition("\n")
+            docline, _, rest = tail.partition("\n")
+            text = f"{head}\n{docline}\n    # {rng.choice(comments)}\n{rest}"
+            example = Example(text, example.family, example.source)
+        if example.text in seen:
+            continue
+        compile(example.text, "<corpus-v4>", "exec")
+        seen.add(example.text)
+        examples.append(example)
+    if len(examples) < count:
+        raise RuntimeError(f"Only generated {len(examples)} unique v4 examples")
+    return examples
+
+
 _GENERATORS = [
     _arithmetic,
     _branches,
@@ -225,8 +615,10 @@ def generate_examples(
 ) -> list[Example]:
     if count <= 0:
         raise ValueError("count must be positive")
-    if version not in (1, 2, 3):
-        raise ValueError("version must be 1, 2, or 3")
+    if version not in (1, 2, 3, 4):
+        raise ValueError("version must be 1, 2, 3, or 4")
+    if version == 4:
+        return _generate_v4(count, seed)
     generators = _GENERATORS + (_V2_GENERATORS if version >= 2 else [])
     rng = random.Random(seed)
     examples: list[Example] = []
@@ -309,7 +701,7 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--output-dir", default="scratch_data")
     parser.add_argument("--count", type=int, default=24000)
     parser.add_argument("--seed", type=int, default=20261101)
-    parser.add_argument("--version", type=int, choices=(1, 2, 3), default=1)
+    parser.add_argument("--version", type=int, choices=(1, 2, 3, 4), default=1)
     args = parser.parse_args(argv)
     print(
         write_corpus(
